@@ -36,13 +36,22 @@ foreach ($cptr in $Computers)
     if ($cptr.'ms-Mcs-AdmPwd' -or $cptr.'msLaps-EncryptedPassword') 
     {
         $LapsSet = $true
+        
         if ($cptr.'ms-Mcs-AdmPwd')
         {
             $LapsType = "Legacy"
         } 
         else 
         {
-            $LapsType = "Modern"
+            $LapsType = $null
+        }
+        if ($cptr.'msLaps-EncryptedPassword')
+        {
+            switch($LapsType)
+            {
+                "Legacy" { $LapsType += ' & Modern' }
+                Default  { $LapsType = "Modern" }
+            }
         }
     }
     else
