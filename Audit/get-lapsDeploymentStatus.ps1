@@ -66,6 +66,6 @@ $Precontent += '<h3> </h3>'
 
 $reportHtml = $result | ConvertTo-Html -Fragment -PreContent $Precontent -Property @('ComputerName','OS','LAPS','Type','LastLogon')
 
-ConvertTo-Html -Body $reportHtml -Head $Header | Out-File C:\Windows\SYSVOL\domain\scripts\LAPS\DailyReport-Laps.html -Force
+ConvertTo-Html -Body $reportHtml -Head $Header | Out-File .\LAPS-DailyReport-Laps.html -Force
 
 $result | Select ComputerName,OS,LAPS,Type,LastLogon | Export-Csv C:\Windows\SYSVOL\domain\scripts\LAPS\DailyReport-Laps.csv -Delimiter ";" -NoTypeInformation -Force
