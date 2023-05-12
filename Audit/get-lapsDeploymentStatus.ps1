@@ -13,7 +13,7 @@
 
 param()
 
-$Computers  = Get-AdComputer -filter { enabled -eq $true } -Properties ms-Mcs-AdmPwd,OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties ms-Mcs-AdmPwd,OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
 
 #.CSS Style
 $Header  = '<Style>'
@@ -26,13 +26,16 @@ $Header += '  th    { background: #395870; background: linear-gradiant(#49708f, 
 $Header += '</Style>'
 
 #.Header
-$Precontent += "<h1>LAPS (Local Admin Password Solution)</h1>"
+$Precontent = "<h1>LAPS (Local Admin Password Solution)</h1>"
 $Precontent += "<h2>Rapport d'avancement du déploiement du "+ (Get-Date -format "dd/MM/yyyy - HH:mm:ss") + "</h2>"
 
 #.Grabing collection
-$result = @()
+[System.Collections.Generic.List[PSObject]]$result = @()
 foreach ($cptr in $Computers)
 {
+    $LapsSet = $false
+    $LapsType = $null
+
     if ($cptr.'ms-Mcs-AdmPwd' -or $cptr.'msLaps-EncryptedPassword') 
     {
         $LapsSet = $true
@@ -41,10 +44,7 @@ foreach ($cptr in $Computers)
         {
             $LapsType = "Legacy"
         } 
-        else 
-        {
-            $LapsType = $null
-        }
+
         if ($cptr.'msLaps-EncryptedPassword')
         {
             switch($LapsType)
@@ -54,17 +54,21 @@ foreach ($cptr in $Computers)
             }
         }
     }
-    else
-    {
-        $LapsSet = $false
-        $LapsType = $null
-    }
 
-    $result += New-Object -TypeName psobject -Property @{ComputerName = $cptr.sAMAccountName ; OS = $Cptr.OperatingSystem ; LAPS = $LapsSet ; Type = $LapsType ; LastLogon = [DateTime]::FromFileTime($cptr.LastLogonTimeStamp) }
+    $object = [PSCustomObject][ordered]@{
+        ComputerName = $cptr.sAMAccountName
+        OS           = $Cptr.OperatingSystem
+        LAPS         = $LapsSet
+        Type         = $LapsType
+        LastLogon    = [DateTime]::FromFileTime($cptr.LastLogonTimeStamp)
+	 }
+
+    $result.Add($object)
+
 }
 
 #.Exporting Result as html report
-$TotalCptr = $Computers.Count - (Get-ADDomainController -Filter *).count
+$TotalCptr = $Computers.Count - @(Get-ADDomainController -Filter *).count # @ in case of only one DC
 $LapsDone  = ($result | Where-Object { $_.LAPS -eq $true }).count
 $LapsToDo  = ($result | Where-Object { $_.LAPS -eq $False }).count
 $LapsCover = [int]($LapsDone / $TotalCptr * 100)
@@ -75,6 +79,7 @@ $Precontent += '<h3> </h3>'
 
 $reportHtml = $result | ConvertTo-Html -Fragment -PreContent $Precontent -Property @('ComputerName','OS','LAPS','Type','LastLogon')
 
-ConvertTo-Html -Body $reportHtml -Head $Header | Out-File .\LAPS-DailyReport-Laps.html -Force
+# $PSScriptRoot to export script in the same path in case of scheduled task
+ConvertTo-Html -Body $reportHtml -Head $Header | Out-File $PSScriptRoot\LAPS-DailyReport-Laps.html -Force
 
-$result | Select ComputerName,OS,LAPS,Type,LastLogon | Export-Csv .\LAPS-DailyReport-Laps.csv -Delimiter ";" -NoTypeInformation -Force
+$result | Select-Object ComputerName,OS,LAPS,Type,LastLogon | Export-Csv $PSScriptRoot\LAPS-DailyReport-Laps.csv -Delimiter ";" -NoTypeInformation -Force
