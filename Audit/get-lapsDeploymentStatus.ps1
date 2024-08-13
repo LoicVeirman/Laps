@@ -9,6 +9,7 @@
     
     History : 
     2023/05/12 - Added management for new LAPS solution.
+    2024/08/13 - Added try/catch to deal case where legacy laps is not present.
 #>
 
 param()
