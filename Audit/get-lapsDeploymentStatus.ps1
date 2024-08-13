@@ -13,7 +13,13 @@
 
 param()
 
-$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties ms-Mcs-AdmPwd,OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+Try {
+	# Default: Legacy and modern LAPS
+ 	$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties ms-Mcs-AdmPwd,OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+ } Catch {
+ 	# Legacy LAPS not present
+ 	$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+ }
 
 #.CSS Style
 $Header  = '<Style>'
