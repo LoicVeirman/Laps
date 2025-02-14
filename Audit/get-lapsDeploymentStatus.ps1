@@ -16,11 +16,24 @@ param()
 
 Try {
 	# Default: Legacy and modern LAPS
- 	$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties ms-Mcs-AdmPwd,OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+
+    $Param = @{
+        #computers that are not domain controller and are enabled
+        LDAPFilter = "(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=8192)(!userAccountControl:1.2.840.113556.1.4.803:=2))"
+        Properties = "ms-Mcs-AdmPwd","OperatingSystem","LastLogonTimeStamp","msLaps-EncryptedPassword"
+    }
+    $Computers = Get-ADComputer @param
+
  } Catch {
  	# Legacy LAPS not present
- 	$Computers  = Get-ADComputer -Filter { enabled -eq $true } -Properties OperatingSystem,LastLogonTimeStamp,msLaps-EncryptedPassword
+     $Param = @{
+        #computers that are not domain controller and are enabled
+        LDAPFilter = "(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=8192)(!userAccountControl:1.2.840.113556.1.4.803:=2))"
+        Properties = "OperatingSystem","LastLogonTimeStamp","msLaps-EncryptedPassword"
+    }
+    $Computers = Get-ADComputer @param
  }
+
 
 #.CSS Style
 $Header  = '<Style>'
@@ -75,9 +88,9 @@ foreach ($cptr in $Computers)
 }
 
 #.Exporting Result as html report
-$TotalCptr = $Computers.Count - @(Get-ADDomainController -Filter *).count # @ in case of only one DC
-$LapsDone  = ($result | Where-Object { $_.LAPS -eq $true }).count
-$LapsToDo  = ($result | Where-Object { $_.LAPS -eq $False }).count
+$TotalCptr = ($Computers  | Measure-Object).Count 
+$LapsDone  = ($result | Where-Object { $_.LAPS -eq $true } | Measure-Object).count
+$LapsToDo  = ($result | Where-Object { $_.LAPS -eq $False } | Measure-Object).count 
 $LapsCover = [int]($LapsDone / $TotalCptr * 100)
 
 $Precontent += '<h3> </h3>'
